@@ -11,7 +11,7 @@ const registerUser = async (req, res) => {
   try {
     let user = await User.findOne({ email });
     if (user) {
-      return res.status(400).json({ msg: 'User already exists' });
+      return res.status(400).json({ success: false, message: 'An account with this email address already exists. Please use a different email or try logging in.' });
     }
 
     user = new User({ name, email, password, role });
@@ -34,8 +34,12 @@ const registerUser = async (req, res) => {
       }
     );
   } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server error');
+    console.error('Registration Error:', err.message);
+    if (err.name === 'ValidationError') {
+      const messages = Object.values(err.errors).map(e => e.message);
+      return res.status(400).json({ success: false, message: 'Validation failed. Please check your input.', errors: messages });
+    }
+    res.status(500).json({ success: false, message: 'Registration failed due to a server error. Please try again later.' });
   }
 };
 
@@ -49,12 +53,12 @@ const loginUser = async (req, res) => {
     try {
         const user = await User.findOne({ email }).select('+password');
         if (!user) {
-            return res.status(400).json({ msg: 'Invalid credentials' });
+            return res.status(401).json({ success: false, message: 'Invalid email or password. Please check your credentials and try again.' });
         }
 
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
-            return res.status(400).json({ msg: 'Invalid credentials' });
+            return res.status(401).json({ success: false, message: 'Invalid email or password. Please check your credentials and try again.' });
         }
 
         const payload = {
@@ -75,8 +79,8 @@ const loginUser = async (req, res) => {
             }
         );
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server error');
+        console.error('Login Error:', err.message);
+        res.status(500).json({ success: false, message: 'Login failed due to a server error. Please try again later.' });
     }
 };
 

@@ -21,8 +21,12 @@ const createDonation = async (req, res) => {
     const savedDonation = await newDonation.save();
     res.status(201).json(savedDonation);
   } catch (error) {
-    console.error(error.message);
-    res.status(500).send('Server Error');
+    console.error('Create Donation Error:', error.message);
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map(e => e.message);
+      return res.status(400).json({ success: false, message: 'Validation failed. Please check your donation details.', errors: messages });
+    }
+    res.status(500).json({ success: false, message: 'Failed to create donation due to a server error. Please try again later.' });
   }
 };
 
@@ -36,8 +40,8 @@ const getAvailableDonations = async (req, res) => {
             .sort({ createdAt: -1 });
         res.json(donations);
     } catch (error) {
-        console.error(error.message);
-        res.status(500).send('Server Error');
+        console.error('Fetch Available Donations Error:', error.message);
+        res.status(500).json({ success: false, message: 'Unable to retrieve available donations at this time. Please try again later.' });
     }
 };
 
@@ -59,15 +63,15 @@ const claimDonation = async (req, res) => {
     );
 
     if (!updatedDonation) {
-      return res.status(409).json({ msg: 'Sorry, this donation has already been claimed.' });
+      return res.status(409).json({ success: false, message: 'This donation is no longer available — it has already been claimed by another user. Please browse other available donations.' });
     }
 
     // If the update was successful, send a success response.
-    res.status(200).json({ msg: 'Donation claimed successfully', donation: updatedDonation });
+    res.status(200).json({ success: true, message: 'Donation claimed successfully! The donor will be notified.', donation: updatedDonation });
 
   } catch (error) {
-    console.error(error.message);
-    res.status(500).send('Server Error');
+    console.error('Claim Donation Error:', error.message);
+    res.status(500).json({ success: false, message: 'Failed to claim donation due to a server error. Please try again later.' });
   }
 };
 
@@ -80,8 +84,8 @@ const getMyDonations = async (req, res) => {
         const donations = await Donation.find({ donor: req.user.id }).sort({ createdAt: -1 });
         res.json(donations);
     } catch (error) {
-        console.error(error.message);
-        res.status(500).send('Server Error');
+        console.error('Fetch My Donations Error:', error.message);
+        res.status(500).json({ success: false, message: 'Unable to retrieve your donations at this time. Please try again later.' });
     }
 };
 
@@ -94,8 +98,8 @@ const getMyClaims = async (req, res) => {
         const donations = await Donation.find({ receiver: req.user.id }).sort({ createdAt: -1 });
         res.json(donations);
     } catch (error) {
-        console.error(error.message);
-        res.status(500).send('Server Error');
+        console.error('Fetch My Claims Error:', error.message);
+        res.status(500).json({ success: false, message: 'Unable to retrieve your claimed donations at this time. Please try again later.' });
     }
 };
 
